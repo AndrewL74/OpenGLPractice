@@ -12,6 +12,8 @@
 #include<GL/glew.h> //Need to import glew.h before glfw3.h; Order matters
 #include<GLFW/glfw3.h>
 
+#include "shader.h"
+
 //#include<glm/glm.hpp>
 //using namespace glm;
 
@@ -40,7 +42,7 @@ int main() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL 
 
 	// Open a window and create its OpenGL context
-	GLFWwindow* window; // (In the accompanying source code, this variable is global for simplicity)
+	GLFWwindow* window;
 	window = glfwCreateWindow(1024, 768, "Tutorial 01", NULL, NULL);
 	if (window == NULL) {
 		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
@@ -57,11 +59,53 @@ int main() {
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
+	/*
+	* Tutorial02: Draw a triangle using OpenGL 3
+	* http://www.opengl-tutorial.org/beginners-tutorials/tutorial-2-the-first-triangle/
+	* The tutorial does a poor job explaining where in the program to add the new code segments. I advise referencing
+	* the project's github for more clear instruction. Also the step to add the "glClearColor..." line of code was
+	* missing and later referenced as if it had already been added
+	*/
+
+	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);  //This step was missing in Tutorial02's instructions
+
+	//Create a Vertex Array Object and set it as the current VAO
+	GLuint VertexArrayID;
+	glGenVertexArrays(1, &VertexArrayID);
+	glBindVertexArray(VertexArrayID);
+
+	//Load Shaders
+	GLuint programID = LoadShaders("SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader");
+
+	//Vertices of the triangle
+	static const GLfloat g_vertex_buffer_data[] = {
+		-1.0f, -1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f
+	};
+
+	GLuint vertexbuffer;  //Declare a vertex buffer
+	glGenBuffers(1, &vertexbuffer);  //Initialize/generate a buffer and store in vertexbuffer
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);  //Bind the buffer to GL_ARRAY_BUFFER
+	//Creates and initializes a buffer object's data store
+	//glBufferData(GLenum target, GLsizeiptr size, const void* data, GLenum usage)
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+
 	do {
 		// Clear the screen. It's not mentioned before Tutorial 02, but it can cause flickering, so it's there nonetheless.
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// Draw nothing, see you in tutorial 2 !
+		glUseProgram(programID);
+
+		glEnableVertexAttribArray(0);  //Open AttribArray
+		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+		//Define an array of generic vertex attribute data
+		//glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void* pointer)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+		//Draw arrays of type triangles from vertex 0 and stoping after drawing 3 vertices
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDisableVertexAttribArray(0);  //Close AttribArray
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -70,6 +114,13 @@ int main() {
 	} // Check if the ESC key was pressed or the window was closed
 	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
 		glfwWindowShouldClose(window) == 0);
+
+	//Cleanup Vertex Buffer Objects
+	glDeleteBuffers(1, &vertexbuffer);
+	glDeleteVertexArrays(1, &VertexArrayID);
+	glDeleteProgram(programID);
+
+	glfwTerminate();
 
 	return 0;
 }
